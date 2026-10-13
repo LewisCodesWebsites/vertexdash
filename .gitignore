@@ -1,9 +1,11 @@
 # Godot
 .godot/
+.tools/
 .import/
 export.cfg
 export_presets.cfg
 *.translation
+tests/recordings/*.csv.import
 mono_crash.*.json
 # Never commit Geometry Dash assets or saves
 gd_resources/

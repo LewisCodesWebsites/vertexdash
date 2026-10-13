@@ -15,6 +15,25 @@ Milestone 1 in progress. See [docs/MILESTONES.md](docs/MILESTONES.md).
 - Your own copy of Geometry Dash (Steam) for the real textures, music and levels.
   Without it, VertexDash falls back to built-in shapes drawn in code.
 
+## Headless replay tests
+
+Run the SPEC.md section 6 recording checks with:
+
+```sh
+godot --headless --path . --script res://scripts/test_runner.gd
+```
+
+The runner loads the hand-authored fixtures in `tests/levels/` and checks every recorded
+position, death state, and annotated event tick. To play a saved level, pass the save path
+and level name after `--`, for example:
+
+```sh
+godot --path . -- --gd-save="C:/path/to/CCLocalLevels.dat" --level="VDBlock"
+```
+
+Without `--level`, the game lists level names and exits. The default save path is
+`%LOCALAPPDATA%/GeometryDash/CCLocalLevels.dat` on Windows.
+
 ## How this project is built
 
 VertexDash follows a clean-room process. Behaviour is measured and written down in

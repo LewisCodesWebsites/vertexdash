@@ -12,12 +12,15 @@ const OUTER_HALF := 15.0 # CUBE-06
 const INNER_HALF := 4.5 # CUBE-06
 const SPIKE_HALF_WIDTH := 3.0 # OBJ-02
 const SPIKE_HALF_HEIGHT := 6.0 # OBJ-02
+const SPIN_PER_TICK := 1.725 # CUBE-07: degrees clockwise per airborne tick.
+const SETTLE_FACTOR := 0.883 # CUBE-07: remaining angle kept per grounded tick.
 
 var tick := 0
 var x := 0.0
 var y := START_Y
 var vy := 0.0
 var dead := false
+var angle := 0.0 # CUBE-07: visual only, degrees clockwise. Never used for collision.
 var supported := true
 var support_top := GROUND_Y
 var jump_held := false
@@ -30,6 +33,7 @@ func reset(level_objects: Array[Dictionary]) -> void:
 	y = START_Y
 	vy = 0.0
 	dead = false
+	angle = 0.0
 	supported = true
 	support_top = GROUND_Y
 	jump_held = false
@@ -79,13 +83,14 @@ func step() -> Dictionary:
 	if _block_death() or _spike_death(): # OBJ-03
 		dead = true
 		event = "death"
+	_update_angle()
 	# B-05: a press latch is consumed at a supported departure or discarded in air.
 	if jump_buffered:
 		jump_buffered = false
 	return state(event)
 
 func state(event: String = "") -> Dictionary:
-	return {"tick": tick, "x": x, "y": y, "dead": dead, "event": event, "vy": vy}
+	return {"tick": tick, "x": x, "y": y, "dead": dead, "event": event, "vy": vy, "angle": angle}
 
 func _support_remains() -> bool:
 	if is_equal_approx(support_top, GROUND_Y):
@@ -131,3 +136,17 @@ func _spike_death() -> bool:
 		if absf(x - ox) < OUTER_HALF + SPIKE_HALF_WIDTH and absf(y - oy) < OUTER_HALF + SPIKE_HALF_HEIGHT: # CUBE-06, OBJ-02
 			return true
 	return false
+
+func _update_angle() -> void:
+	# CUBE-07: spin at a constant rate while airborne; once supported, keep turning clockwise
+	# towards the next multiple of 90 degrees, shrinking the remaining angle each tick.
+	# Unverified in SPEC: settle direction when less than 45 degrees past a multiple of 90.
+	if not supported:
+		angle = fmod(angle + SPIN_PER_TICK, 360.0)
+		return
+	var target := ceilf(angle / 90.0 - 0.000001) * 90.0
+	var remaining := target - angle
+	if remaining < 0.01:
+		angle = fmod(target, 360.0)
+	else:
+		angle = target - remaining * SETTLE_FACTOR

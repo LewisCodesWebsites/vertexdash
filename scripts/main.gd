@@ -76,7 +76,12 @@ func _draw() -> void:
 		else:
 			draw_colored_polygon(PackedVector2Array([center + Vector2(0, -24), center + Vector2(-15, 6), center + Vector2(15, 6)]), Color("f16d83"))
 	var player_center := Vector2(320, origin.y - (simulation.y - 90.0) * scale_factor)
-	draw_rect(Rect2(player_center - Vector2(30, 30), Vector2(60, 60)), Color("f7d777"))
+	# CUBE-07: rotation is visual only; Godot's positive rotation is clockwise on screen.
+	draw_set_transform(player_center, deg_to_rad(simulation.angle), Vector2.ONE)
+	draw_rect(Rect2(Vector2(-30, -30), Vector2(60, 60)), Color("f7d777"))
+	draw_rect(Rect2(Vector2(-30, -30), Vector2(60, 60)), Color("8a6d1f"), false, 4.0)
+	draw_rect(Rect2(Vector2(6, -22), Vector2(14, 14)), Color("8a6d1f"))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	draw_string(ThemeDB.fallback_font, Vector2(20, 28), "VertexDash | tick %d | x %.2f | y %.2f" % [simulation.tick, simulation.x, simulation.y], HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE)
 	if simulation.dead:
 		draw_string(ThemeDB.fallback_font, Vector2(20, 52), "DEAD — restarting", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("ff7777"))

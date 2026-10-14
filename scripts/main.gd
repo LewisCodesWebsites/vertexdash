@@ -4,8 +4,13 @@ const Simulation = preload("res://scripts/simulation.gd")
 const LevelLoader = preload("res://scripts/level_loader.gd")
 const AssetCatalog = preload("res://scripts/asset_catalog.gd")
 const GroundLine = preload("res://scripts/ground_line.gd")
+const TICK_LENGTH := 1.0 / 240.0 # SIM-01
 var simulation = Simulation.new()
 var accumulator := 0.0
+var previous_position := Vector2.ZERO
+var current_position := Vector2.ZERO
+var previous_rotation := 0.0
+var current_rotation := 0.0
 var jump_was_down := false
 var scene_objects: Array[Dictionary] = []
 var assets = AssetCatalog.new()
@@ -36,6 +41,7 @@ func _ready() -> void:
 		return
 	scene_objects = selection.objects
 	simulation.reset(scene_objects)
+	_snap_render_state()
 	_load_install_assets()
 	_setup_camera()
 	if assets.available:
@@ -79,7 +85,7 @@ func _update_camera() -> void:
 	var viewport_size := get_viewport_rect().size
 	var zoom := viewport_size.y / 320.0 # CAM-01: 320 world units tall at every window shape.
 	var view_width := viewport_size.x / zoom
-	var camera_left := maxf(15.0, simulation.x - 209.4) # CAM-01: fixed until player reaches follow threshold.
+	var camera_left := maxf(15.0, _interpolated_position().x - 209.4) # CAM-01: fixed until player reaches follow threshold.
 	camera.zoom = Vector2(zoom, zoom)
 	camera.position = Vector2(camera_left + view_width * 0.5, -160.0) # CAM-01: world bottom y=0, fixed vertical.
 	if ground_line != null:
@@ -115,13 +121,20 @@ func _process(delta: float) -> void:
 	var pressed := jump_down and not jump_was_down
 	jump_was_down = jump_down
 	simulation.set_jump(jump_down, pressed)
-	while accumulator >= 1.0 / 240.0:
+	while accumulator >= TICK_LENGTH:
+		previous_position = current_position
+		previous_rotation = current_rotation
 		var state: Dictionary = simulation.step()
+		if state.event == "restart":
+			_snap_render_state() # OBJ-03: do not interpolate between attempts.
+		else:
+			current_position = Vector2(float(state.x), float(state.y))
+			current_rotation = float(state.angle) # CUBE-07
 		if state.dead:
 			accumulator = 0.0
 			music_player.stop() if music_player != null else null # B-08: new attempt begins on next simulation step.
 			break
-		accumulator -= 1.0 / 240.0
+		accumulator -= TICK_LENGTH
 		if state.event == "restart":
 			_start_attempt_music() # MUS-01, B-08: restart from the beginning on every attempt.
 	_update_camera()
@@ -129,7 +142,7 @@ func _process(delta: float) -> void:
 
 func _draw() -> void:
 	var view_width := get_viewport_rect().size.x / (get_viewport_rect().size.y / 320.0)
-	var camera_left := maxf(15.0, simulation.x - 209.4) # CAM-01
+	var camera_left := maxf(15.0, _interpolated_position().x - 209.4) # CAM-01
 	if assets.available:
 		_draw_background(camera_left, view_width) # AST-06, COL-02
 		_draw_ground(camera_left, view_width) # AST-05, COL-02
@@ -147,21 +160,40 @@ func _draw() -> void:
 				_draw_fallback_object(int(obj.id), center)
 		else:
 			_draw_fallback_object(int(obj.id), center)
-	var player_center := Vector2(simulation.x, -simulation.y) # SIM-02
+	var render_position := _interpolated_position()
+	var render_rotation := _interpolated_rotation()
+	var player_center := Vector2(render_position.x, -render_position.y) # SIM-02
 	var main_frame := assets.frame("icons", "player_01_001.png") # AST-02
 	var secondary_frame := assets.frame("icons", "player_01_2_001.png") # AST-02
 	if assets.available and not main_frame.is_empty() and not secondary_frame.is_empty():
-		draw_set_transform(player_center, -deg_to_rad(simulation.angle), Vector2.ONE) # CUBE-07
+		draw_set_transform(player_center, -deg_to_rad(render_rotation), Vector2.ONE) # CUBE-07
 		_draw_icon_frame(main_frame, Rect2(Vector2(-15, -15), Vector2(30, 30)), assets.primary_color)
 		var detail_size := Vector2(secondary_frame.rect.size) # AST-01/AST-02: low-res sheet is 1 px per world unit; draw at native size, centred.
 		_draw_icon_frame(secondary_frame, Rect2(-detail_size / 2.0, detail_size), assets.secondary_color)
 	else:
 		# B-06: code-drawn cube remains the fallback when the runtime icon asset is absent.
-		draw_set_transform(player_center, -deg_to_rad(simulation.angle), Vector2.ONE) # CUBE-07
+		draw_set_transform(player_center, -deg_to_rad(render_rotation), Vector2.ONE) # CUBE-07
 		draw_rect(Rect2(Vector2(-15, -15), Vector2(30, 30)), Color("f7d777"))
 		draw_rect(Rect2(Vector2(-15, -15), Vector2(30, 30)), Color("8a6d1f"), false, 1.5)
 		draw_rect(Rect2(Vector2(3, -11), Vector2(7, 7)), Color("8a6d1f"))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+func _snap_render_state() -> void:
+	previous_position = Vector2(simulation.x, simulation.y)
+	current_position = previous_position
+	previous_rotation = simulation.angle
+	current_rotation = previous_rotation
+
+func _render_alpha() -> float:
+	return clampf(accumulator / TICK_LENGTH, 0.0, 1.0)
+
+func _interpolated_position() -> Vector2:
+	return previous_position.lerp(current_position, _render_alpha())
+
+func _interpolated_rotation() -> float:
+	# CUBE-07: interpolate through 360° wrap along the shortest angular distance.
+	var delta := fposmod(current_rotation - previous_rotation + 180.0, 360.0) - 180.0
+	return previous_rotation + delta * _render_alpha()
 
 func _draw_background(camera_left: float, view_width: float) -> void:
 	# AST-06, B-07: 512-unit tiles scroll at a placeholder fraction of camera motion; fixed vertically.

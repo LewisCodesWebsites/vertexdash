@@ -10,6 +10,12 @@ window/size/viewport_width=960
 window/size/viewport_height=540
 window/stretch/mode="canvas_items"
 
+[vertexdash]
+assets/install_path=""
+
+[vertexdash]
+assets/install_path=""
+
 [rendering]
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"

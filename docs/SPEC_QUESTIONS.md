@@ -10,6 +10,10 @@ updating SPEC.md and marking the question resolved.
 | B-03 | OBJ-03 says a death is followed by a restart from tick 0, while TC-03 explicitly says the next step restarts at tick 0. Must the next step report tick 0 only, or also advance the new attempt to tick 1? | Codex builder | Answered below |
 | B-04 | CAM-01 is TBD, and M1 requests drawing the level and player. What camera behavior and rendering scale/view framing are expected for M1? | Codex builder | Answered below |
 | B-05 | TC-01 and TC-02 describe a jump press and release before the departure tick, but CUBE-05 specifies hold-to-auto-rejump. Is a tap consumed as a one-tick buffered request, or does M1 require preserving held state across level ticks separately? | Codex builder | Answered below |
+| B-06 | COL-02 says the cube uses the player's profile primary and secondary colors, but SPEC.md does not define where those colors are stored or their exact RGB values. Which profile source and color decoding should M2 use? | Codex builder | Answered below |
+| B-07 | AST-06 says background parallax relative to the camera is unmeasured. What horizontal and vertical background scroll behavior should M2 reproduce? | Codex builder | Answered below |
+| B-08 | MUS-01 says the music start offset relative to tick 0 is unmeasured. Should M2 start Stereo Madness at tick 0, or is there a measured offset to apply? | Codex builder | Answered below |
+| B-09 | COL-02 allows object key `21` to select a non-default color channel, but section 7 only gives the default channel colors and does not specify decoding custom channel entries from the level header. Should M2 support custom level channels now, and what header/channel mapping should it use? | Codex builder | Answered below |
 
 ## Answers (reviewed by Lewis)
 
@@ -66,3 +70,34 @@ is enough. A press and release made entirely while airborne does nothing: clear 
 a tick ends with the cube in the air. While held, the cube spends exactly one tick on the
 surface after each landing and then re-jumps (CUBE-05). Not specified yet: a press that starts in
 the air and is still held at landing; for M1 treat it the same as held.
+
+## Answers to B-06 to B-09 (reviewed by Lewis)
+
+These are presentation choices for M2, not measured game behaviour. Each one is a single named
+setting or constant with a comment saying it is a placeholder, so the analyst's measurements can
+replace it later without touching anything else.
+
+### B-06: Player icon colours
+
+Reading the player's profile is not specified yet. For M2, make the colours project settings
+`vertexdash/player/primary` and `vertexdash/player/secondary`, defaulting to the new-level player
+channels in COL-01 (1005 = 125,255,0 and 1006 = 0,255,255). Draw the real cube from AST-02:
+main layer tinted with the primary colour, secondary layer tinted with the secondary colour,
+rotated as CUBE-07. Leave the glow layer out for now. Keep the code-drawn cube as the fallback.
+
+### B-07: Background scrolling
+
+Not measured yet. For M2, scroll the background horizontally at 0.1 times the camera's speed and
+keep it fixed vertically, using a constant `BACKGROUND_PARALLAX := 0.1` marked as a placeholder.
+
+### B-08: Music start
+
+Not measured yet. Start the song exactly when the level starts (tick 0), with a constant
+`MUSIC_OFFSET_SECONDS := 0.0` marked as a placeholder. Restart it from the beginning on every new
+attempt.
+
+### B-09: Custom colour channels
+
+Not in M2. Only the default channels in COL-01 are used. An object whose key `21` names any other
+channel is drawn with its normal sprite tinted with channel 1004 (white). Full colour-channel
+support is a later milestone.

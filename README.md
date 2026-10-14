@@ -7,7 +7,7 @@ and graphics from your own legally owned copy of Geometry Dash, plus features th
 
 ## Status
 
-Milestone 1 in progress. See [docs/MILESTONES.md](docs/MILESTONES.md).
+Milestone 2 in progress. See [docs/MILESTONES.md](docs/MILESTONES.md).
 
 ## Requirements
 
@@ -24,15 +24,18 @@ godot --headless --path . --script res://scripts/test_runner.gd
 ```
 
 The runner loads the hand-authored fixtures in `tests/levels/` and checks every recorded
-position, death state, and annotated event tick. To play a saved level, pass the save path
-and level name after `--`, for example:
+position, death state, and annotated event tick. To play a saved level, pass the save path,
+level name, and optionally the game install directory after `--`, for example:
 
 ```sh
-godot --path . -- --gd-save="C:/path/to/CCLocalLevels.dat" --level="VDBlock"
+godot --path . -- --gd-save="C:/path/to/CCLocalLevels.dat" --level="VDBlock" --gd-install="C:/Program Files (x86)/Steam/steamapps/common/Geometry Dash"
 ```
 
 Without `--level`, the game lists level names and exits. The default save path is
-`%LOCALAPPDATA%/GeometryDash/CCLocalLevels.dat` on Windows.
+`%LOCALAPPDATA%/GeometryDash/CCLocalLevels.dat` on Windows. The default install path is the
+standard Steam folder under `%ProgramFiles(x86)%`; configure it with `--gd-install` or the
+`vertexdash/assets/install_path` project setting. Game files are read directly from
+`Resources` and are never copied into this repository.
 
 ## How this project is built
 

@@ -13,7 +13,10 @@ static func parse_level_string(level_text: String) -> Array[Dictionary]:
 		for index in range(0, pairs.size(), 2):
 			fields[pairs[index]] = pairs[index + 1]
 		if fields.has("1") and fields.has("2") and fields.has("3"):
-			objects.append({"id": int(fields["1"]), "x": float(fields["2"]), "y": float(fields["3"])}) # LVL-03
+			var object := {"id": int(fields["1"]), "x": float(fields["2"]), "y": float(fields["3"])} # LVL-03
+			if fields.has("21"):
+				object["color_channel"] = int(fields["21"]) # LVL-03
+			objects.append(object)
 	return objects
 
 static func load_save(path: String) -> Dictionary:

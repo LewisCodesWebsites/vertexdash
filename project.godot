@@ -13,9 +13,6 @@ window/stretch/mode="canvas_items"
 [vertexdash]
 assets/install_path=""
 
-[vertexdash]
-assets/install_path=""
-
 [rendering]
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"

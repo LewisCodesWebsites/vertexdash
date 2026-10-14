@@ -11,6 +11,9 @@ var scene_objects: Array[Dictionary] = []
 var assets = AssetCatalog.new()
 var camera: Camera2D
 var ground_line: Node2D
+var music_player: AudioStreamPlayer
+const BACKGROUND_PARALLAX := 0.1 # B-07: placeholder pending measurement.
+const MUSIC_OFFSET_SECONDS := 0.0 # B-08: placeholder pending measurement.
 var bg_color := Color8(40, 125, 255) # COL-01
 var ground_color := Color8(0, 102, 255) # COL-01
 var line_color := Color.WHITE # COL-01
@@ -36,10 +39,10 @@ func _ready() -> void:
 	_load_install_assets()
 	_setup_camera()
 	if assets.available:
-		var player := AudioStreamPlayer.new()
-		player.stream = assets.music
-		add_child(player)
-		player.play() # MUS-01: begin music with the tick-0 level state; exact offset is unmeasured.
+		music_player = AudioStreamPlayer.new()
+		music_player.stream = assets.music
+		add_child(music_player)
+		_start_attempt_music() # MUS-01, B-08
 	queue_redraw()
 
 func _load_install_assets() -> void:
@@ -116,8 +119,11 @@ func _process(delta: float) -> void:
 		var state: Dictionary = simulation.step()
 		if state.dead:
 			accumulator = 0.0
+			music_player.stop() if music_player != null else null # B-08: new attempt begins on next simulation step.
 			break
 		accumulator -= 1.0 / 240.0
+		if state.event == "restart":
+			_start_attempt_music() # MUS-01, B-08: restart from the beginning on every attempt.
 	_update_camera()
 	queue_redraw()
 
@@ -142,19 +148,45 @@ func _draw() -> void:
 		else:
 			_draw_fallback_object(int(obj.id), center)
 	var player_center := Vector2(simulation.x, -simulation.y) # SIM-02
-	# Main/secondary sprite tint requires the player's profile colours (COL-02); keep the
-	# code-drawn cube until that profile palette source is specified.
-	draw_set_transform(player_center, -deg_to_rad(simulation.angle), Vector2.ONE) # CUBE-07
-	draw_rect(Rect2(Vector2(-15, -15), Vector2(30, 30)), Color("f7d777"))
-	draw_rect(Rect2(Vector2(-15, -15), Vector2(30, 30)), Color("8a6d1f"), false, 1.5)
-	draw_rect(Rect2(Vector2(3, -11), Vector2(7, 7)), Color("8a6d1f"))
+	var main_frame := assets.frame("icons", "player_01_001.png") # AST-02
+	var secondary_frame := assets.frame("icons", "player_01_2_001.png") # AST-02
+	if assets.available and not main_frame.is_empty() and not secondary_frame.is_empty():
+		draw_set_transform(player_center, -deg_to_rad(simulation.angle), Vector2.ONE) # CUBE-07
+		_draw_icon_frame(main_frame, Rect2(Vector2(-15, -15), Vector2(30, 30)), assets.primary_color)
+		var detail_size := Vector2(secondary_frame.rect.size) # AST-01/AST-02: low-res sheet is 1 px per world unit; draw at native size, centred.
+		_draw_icon_frame(secondary_frame, Rect2(-detail_size / 2.0, detail_size), assets.secondary_color)
+	else:
+		# B-06: code-drawn cube remains the fallback when the runtime icon asset is absent.
+		draw_set_transform(player_center, -deg_to_rad(simulation.angle), Vector2.ONE) # CUBE-07
+		draw_rect(Rect2(Vector2(-15, -15), Vector2(30, 30)), Color("f7d777"))
+		draw_rect(Rect2(Vector2(-15, -15), Vector2(30, 30)), Color("8a6d1f"), false, 1.5)
+		draw_rect(Rect2(Vector2(3, -11), Vector2(7, 7)), Color("8a6d1f"))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 func _draw_background(camera_left: float, view_width: float) -> void:
-	# AST-06: 512-unit background tiles; parallax rate remains an open measurement.
-	var start_x := floorf(camera_left / 512.0) * 512.0
-	for x in range(int(start_x), int(camera_left + view_width + 512.0), 512):
-		draw_texture_rect(assets.background, Rect2(Vector2(x, -512), Vector2(512, 512)), false, bg_color)
+	# AST-06, B-07: 512-unit tiles scroll at a placeholder fraction of camera motion; fixed vertically.
+	var scroll_x := camera_left * (1.0 - BACKGROUND_PARALLAX)
+	var start_x := floorf(scroll_x / 512.0) * 512.0
+	for x in range(int(start_x), int(scroll_x + view_width + 512.0), 512):
+		draw_texture_rect(assets.background, Rect2(Vector2(x - scroll_x + camera_left, -512), Vector2(512, 512)), false, bg_color)
+
+func _draw_icon_frame(frame: Dictionary, destination: Rect2, tint: Color) -> void:
+	# AST-01: atlas rectangles are top-left-origin; restore clockwise-stored frames before drawing.
+	var source: Rect2i = frame.rect
+	if not bool(frame.rotated):
+		draw_texture_rect_region(assets.icon_sheet, destination, source, tint)
+		return
+	var image: Image = assets.icon_sheet.get_image()
+	var cropped: Image = image.get_region(source)
+	cropped.rotate_90(CLOCKWISE)
+	var texture := ImageTexture.create_from_image(cropped)
+	draw_texture_rect(texture, destination, false, tint)
+
+func _start_attempt_music() -> void:
+	if music_player == null:
+		return
+	music_player.stop()
+	music_player.play(MUSIC_OFFSET_SECONDS) # MUS-01, B-08
 
 func _draw_ground(camera_left: float, view_width: float) -> void:
 	# AST-05: tile top meets world y=90 and continues 128 units downward.

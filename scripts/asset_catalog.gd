@@ -6,6 +6,8 @@ var background: Texture2D
 var ground: Texture2D
 var game_sheet: Texture2D
 var icon_sheet: Texture2D
+var primary_color := Color8(125, 255, 0) # COL-01, B-06 placeholder default.
+var secondary_color := Color8(0, 255, 255) # COL-01, B-06 placeholder default.
 var frames := {"game": {}, "icons": {}}
 var music: AudioStream
 var available := false
@@ -22,6 +24,8 @@ func load_from_resources(resources: String) -> bool:
 	ground = ImageTexture.create_from_image(ground_image)
 	game_sheet = game.texture
 	icon_sheet = icons.texture
+	primary_color = Color(ProjectSettings.get_setting("vertexdash/player/primary", Color8(125, 255, 0))) # B-06: profile colors are not specified; configurable placeholder.
+	secondary_color = Color(ProjectSettings.get_setting("vertexdash/player/secondary", Color8(0, 255, 255))) # B-06: profile colors are not specified; configurable placeholder.
 	frames.game = game.frames
 	frames.icons = icons.frames
 	music = AudioStreamMP3.load_from_file(song_path) # MUS-01
